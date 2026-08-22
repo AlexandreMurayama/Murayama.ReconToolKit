@@ -132,6 +132,39 @@ def get_ports_to_scan(args) -> list[int]:
 
     return COMMON_PORTS
 
+def print_http_result(result: dict):
+    print(f"\n    URL:          {result['url']}")
+    print(f"    Status:       {result['status']}")
+    print(f"    Server:       {result['server']}")
+    print(f"    Content-Type: {result['content_type']}")
+    print(
+        f"    Title:        "
+        f"{result['title'] or 'unknown'}"
+    )
+
+    print("\n    Technologies:")
+
+    technologies = result["technologies"]
+
+    if technologies:
+        for name, value in technologies.items():
+            print(f"        {name}: {value}")
+    else:
+        print("        No technologies identified")
+
+    print("\n    Security Headers:")
+
+    for header, details in result["security_headers"].items():
+        if details["present"]:
+            print(
+                f"        [present] {header}: "
+                f"{details['value']}"
+            )
+        else:
+            print(
+                f"        [missing] {header}"
+            )
+
 def main():
     args = parse_args()
 
@@ -173,6 +206,12 @@ def main():
                 timeout=args.timeout,
             )
 
+            if wildcard_addresses:
+                print(
+                    "[!] Wildcard DNS detected: "
+                    + ", ".join(wildcard_addresses)
+                )
+
             if subdomains:
                 for result in subdomains:
                     addresses = ", ".join(result["addresses"])
@@ -191,23 +230,27 @@ def main():
     if args.ports:
         print("\n[+] Port Scan")
 
-        ports_to_scan = get_ports_to_scan(args)
+        try:
+            ports_to_scan = get_ports_to_scan(args)
 
-        port_results  = scan_ports(
-            target=args.target,
-            ports=ports_to_scan,
-            threads=args.threads,
-            timeout=args.timeout,
-        )
+            port_results = scan_ports(
+                target=args.target,
+                ports=ports_to_scan,
+                threads=args.threads,
+                timeout=args.timeout,
+            )
 
-        if port_results :
-            for result in port_results :
-                print(
-                    f"    {result['port']}/tcp "
-                    f"open ({result['service']})"
-                )
-        else:
-            print("    No open ports found")
+            if port_results:
+                for result in port_results:
+                    print(
+                        f"    {result['port']}/tcp "
+                        f"open ({result['service']})"
+                    )
+            else:
+                print("    No open ports found")
+
+        except ValueError as error:
+            print(f"[-] {error}")
 
     if args.http:
         print("\n[+] HTTP Reconnaissance")
@@ -235,19 +278,13 @@ def main():
                     http_results.append(result)
                 else:
                     print(
-                        f"    Port {port}: no valid HTTP/HTTPS response"
+                        f"    Port {port}: "
+                        f"no valid HTTP/HTTPS response"
                     )
 
             if http_results:
                 for result in http_results:
-                    print(f"\n    URL:          {result['url']}")
-                    print(f"    Status:       {result['status']}")
-                    print(f"    Server:       {result['server']}")
-                    print(f"    Content-Type: {result['content_type']}")
-                    print(
-                        f"    Title:        "
-                        f"{result['title'] or 'unknown'}"
-                    )
+                    print_http_result(result)
             else:
                 print("    No HTTP/HTTPS service detected")
 
@@ -258,14 +295,7 @@ def main():
             )
 
             if result:
-                print(f"    URL:          {result['url']}")
-                print(f"    Status:       {result['status']}")
-                print(f"    Server:       {result['server']}")
-                print(f"    Content-Type: {result['content_type']}")
-                print(
-                    f"    Title:        "
-                    f"{result['title'] or 'unknown'}"
-                )
+                print_http_result(result)
             else:
                 print("    No HTTP/HTTPS service detected")
 

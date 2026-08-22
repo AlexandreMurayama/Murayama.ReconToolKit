@@ -2,7 +2,10 @@ import re
 
 import requests
 from requests.exceptions import RequestException
-
+from recon.technologies import (
+    analyze_security_headers,
+    analyze_technologies,
+)
 
 def _extract_title(html: str) -> str | None:
     match = re.search(
@@ -62,6 +65,8 @@ def analyze_http(
                     "unknown",
                 ),
                 "title": _extract_title(response.text),
+                "technologies": analyze_technologies(response.headers),
+                "security_headers": analyze_security_headers(response.headers),
             }
 
         except RequestException:
