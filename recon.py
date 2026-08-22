@@ -1,13 +1,14 @@
 import argparse
+from datetime import datetime, timezone
 
+from recon.cli import get_ports_to_scan
 from recon.dns import enumerate_dns
 from recon.http import analyze_http
+from recon.logger import configure_logging
+from recon.nmap import run_nmap
 from recon.output import save_json
 from recon.ports import scan_ports
 from recon.subdomains import enumerate_subdomains
-from datetime import datetime, timezone
-from recon.logger import configure_logging
-from recon.cli import get_ports_to_scan
 
 
 def parse_args():
@@ -61,7 +62,7 @@ def parse_args():
         "--timeout",
         type=float,
         default=2.0,
-        help="DNS query timeout in seconds"
+        help="Network timeout in seconds"
     )
 
     port_group = parser.add_mutually_exclusive_group()
@@ -75,6 +76,12 @@ def parse_args():
     port_group.add_argument(
         "--port-range",
         help="TCP port range to scan (example: 1-1024)"
+    )
+
+    parser.add_argument(
+        "--nmap",
+        action="store_true",
+        help="Enrich discovered ports with Nmap service detection"
     )
 
     parser.add_argument(
@@ -125,21 +132,33 @@ def print_http_result(result: dict):
             )
 
 
+def print_nmap_result(result: dict):
+    print(
+        f"    {result['port']}/{result['protocol']} "
+        f"{result['service']}"
+    )
+
+    product = result.get("product")
+    version = result.get("version")
+
+    details_parts = []
+
+    if product:
+        details_parts.append(product)
+
+    if version:
+        details_parts.append(version)
+
+    details = " ".join(details_parts)
+
+    if details:
+        print(f"        {details}")
+
+
 def main():
     args = parse_args()
 
     configure_logging(args.verbose)
-
-    recon_results = {
-        "tool": "Murayama Recon Automation Toolkit",
-        "version": "0.1.0",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "target": args.target,
-        "dns": {},
-        "subdomains": [],
-        "ports": [],
-        "http": [],
-    }
 
     if args.threads < 1:
         raise SystemExit(
@@ -151,9 +170,27 @@ def main():
             "[-] --timeout must be greater than 0"
         )
 
+    if args.nmap and not args.ports:
+        raise SystemExit(
+            "[-] --nmap requires --ports"
+        )
+
+    recon_results = {
+        "tool": "Murayama Recon Automation Toolkit",
+        "version": "0.1.0",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "target": args.target,
+        "dns": {},
+        "subdomains": [],
+        "ports": [],
+        "nmap": [],
+        "http": [],
+    }
+
     print("[*] Murayama Recon Automation Toolkit")
     print(f"[*] Target: {args.target}")
 
+    # DNS Enumeration
     if args.dns:
         print("\n[+] DNS Enumeration")
 
@@ -174,6 +211,7 @@ def main():
         except ValueError as error:
             print(f"[-] {error}")
 
+    # Subdomain Enumeration
     if args.subdomains:
         print("\n[+] Subdomain Enumeration")
 
@@ -211,6 +249,7 @@ def main():
 
     port_results = []
 
+    # Native TCP Port Scan
     if args.ports:
         print("\n[+] Port Scan")
 
@@ -235,9 +274,45 @@ def main():
             else:
                 print("    No open ports found")
 
+            # Nmap enrichment
+            if args.nmap and port_results:
+                print("\n[+] Nmap Service Enrichment")
+
+                discovered_ports = [
+                    result["port"]
+                    for result in port_results
+                ]
+
+                nmap_results = run_nmap(
+                    target=args.target,
+                    ports=discovered_ports,
+                    timeout=30.0,
+                )
+
+                recon_results["nmap"] = nmap_results
+
+                if nmap_results:
+                    for result in nmap_results:
+                        print_nmap_result(result)
+                else:
+                    print(
+                        "    No additional service "
+                        "information detected"
+                    )
+
+            elif args.nmap:
+                print(
+                    "\n[+] Nmap Service Enrichment"
+                )
+                print(
+                    "    No open ports available "
+                    "for Nmap enrichment"
+                )
+
         except ValueError as error:
             print(f"[-] {error}")
 
+    # HTTP Reconnaissance
     if args.http:
         print("\n[+] HTTP Reconnaissance")
 
@@ -263,10 +338,7 @@ def main():
 
                 if result:
                     http_results.append(result)
-
-                    recon_results["http"].append(
-                        result
-                    )
+                    recon_results["http"].append(result)
                 else:
                     print(
                         f"    Port {port}: "
@@ -288,16 +360,14 @@ def main():
             )
 
             if result:
-                recon_results["http"].append(
-                    result
-                )
-
+                recon_results["http"].append(result)
                 print_http_result(result)
             else:
                 print(
                     "    No HTTP/HTTPS service detected"
                 )
 
+    # JSON Output
     if args.output:
         try:
             save_json(
