@@ -2,9 +2,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 import secrets
 import string
-
+import logging
 import dns.resolver
 
+logger = logging.getLogger(__name__)
 
 def _generate_random_subdomain(length: int = 16) -> str:
     alphabet = string.ascii_lowercase + string.digits
@@ -74,6 +75,12 @@ def enumerate_subdomains(
             f"Wordlist not found: {wordlist_path}"
         )
 
+    logger.debug(
+        "Starting subdomain enumeration for %s using wordlist %s",
+        target,
+        wordlist_path,
+    )
+
     wildcard_addresses = detect_wildcard_dns(
         target,
         timeout,
@@ -119,6 +126,11 @@ def enumerate_subdomains(
 
     results.sort(
         key=lambda item: item["subdomain"]
+    )
+
+    logger.debug(
+        "Subdomain enumeration completed. %d subdomains found",
+        len(results),
     )
 
     return results, wildcard_addresses

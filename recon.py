@@ -6,6 +6,7 @@ from recon.output import save_json
 from recon.ports import scan_ports
 from recon.subdomains import enumerate_subdomains
 from datetime import datetime, timezone
+from recon.logger import configure_logging
 
 COMMON_PORTS = [
     21,
@@ -98,6 +99,12 @@ def parse_args():
         help="Save reconnaissance results to a JSON file"
     )
 
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose logging"
+    )
+
     return parser.parse_args()
 
 
@@ -178,6 +185,8 @@ def print_http_result(result: dict):
 
 def main():
     args = parse_args()
+
+    configure_logging(args.verbose)
 
     recon_results = {
         "tool": "Murayama Recon Automation Toolkit",
@@ -348,15 +357,19 @@ def main():
                 )
 
     if args.output:
-        save_json(
-            recon_results,
-            args.output,
-        )
+        try:
+            save_json(
+                recon_results,
+                args.output,
+            )
 
-        print(
-            f"\n[+] Results saved to: "
-            f"{args.output}"
-        )
+            print(
+                f"\n[+] Results saved to: "
+                f"{args.output}"
+            )
+
+        except ValueError as error:
+            print(f"\n[-] {error}")
 
 
 if __name__ == "__main__":

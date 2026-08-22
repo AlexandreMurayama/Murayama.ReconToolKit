@@ -1,5 +1,8 @@
 import dns.resolver
+import logging
+import dns.exception
 
+logger = logging.getLogger(__name__)
 
 def enumerate_dns(target: str):
     record_types = ["A", "AAAA", "MX", "NS", "TXT"]
@@ -26,5 +29,15 @@ def enumerate_dns(target: str):
 
         except dns.resolver.NoNameservers:
             results[record_type] = ["No nameservers available"]
+
+        except dns.exception.DNSException as error:
+            logger.debug(
+                "DNS query failed for %s (%s): %s",
+                target,
+                record_type,
+                error,
+            )
+
+            results[record_type] = []
 
     return results

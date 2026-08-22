@@ -1,6 +1,8 @@
 import socket
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+logger = logging.getLogger(__name__)
 
 KNOWN_SERVICES = {
     21: "ftp",
@@ -88,5 +90,18 @@ def scan_ports(
                 results.append(result)
 
     results.sort(key=lambda item: item["port"])
+
+    logger.debug(
+        "Starting port scan against %s with %d ports, %d threads and %.2fs timeout",
+        target,
+        len(ports),
+        threads,
+        timeout,
+    )
+
+    logger.debug(
+        "Port scan completed. %d open ports found",
+        len(results),
+    )
 
     return results
