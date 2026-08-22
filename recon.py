@@ -1,7 +1,25 @@
 import argparse
 from recon.dns import enumerate_dns
 from recon.subdomains import enumerate_subdomains
+from recon.ports import scan_ports
 
+COMMON_PORTS = [
+    21,
+    22,
+    23,
+    25,
+    53,
+    80,
+    110,
+    143,
+    443,
+    445,
+    3306,
+    3389,
+    5432,
+    8080,
+    8443,
+]
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -115,7 +133,23 @@ def main():
             print(f"[-] {error}")
 
     if args.ports:
-        print("[+] Port scanning enabled")
+        print("\n[+] Port Scan")
+
+        results = scan_ports(
+            target=args.target,
+            ports=COMMON_PORTS,
+            threads=args.threads,
+            timeout=args.timeout,
+        )
+
+        if results:
+            for result in results:
+                print(
+                    f"    {result['port']}/tcp "
+                    f"open ({result['service']})"
+                )
+        else:
+            print("    No open ports found")
 
     if args.http:
         print("[+] HTTP reconnaissance enabled")
