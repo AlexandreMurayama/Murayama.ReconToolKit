@@ -1,8 +1,11 @@
 import argparse
+
 from recon.dns import enumerate_dns
-from recon.subdomains import enumerate_subdomains
-from recon.ports import scan_ports
 from recon.http import analyze_http
+from recon.output import save_json
+from recon.ports import scan_ports
+from recon.subdomains import enumerate_subdomains
+from datetime import datetime, timezone
 
 COMMON_PORTS = [
     21,
@@ -21,6 +24,7 @@ COMMON_PORTS = [
     8080,
     8443,
 ]
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -89,6 +93,11 @@ def parse_args():
         help="TCP port range to scan (example: 1-1024)"
     )
 
+    parser.add_argument(
+        "--output",
+        help="Save reconnaissance results to a JSON file"
+    )
+
     return parser.parse_args()
 
 
@@ -132,6 +141,7 @@ def get_ports_to_scan(args) -> list[int]:
 
     return COMMON_PORTS
 
+
 def print_http_result(result: dict):
     print(f"\n    URL:          {result['url']}")
     print(f"    Status:       {result['status']}")
@@ -165,14 +175,30 @@ def print_http_result(result: dict):
                 f"        [missing] {header}"
             )
 
+
 def main():
     args = parse_args()
 
+    recon_results = {
+        "tool": "Murayama Recon Automation Toolkit",
+        "version": "0.1.0",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "target": args.target,
+        "dns": {},
+        "subdomains": [],
+        "ports": [],
+        "http": [],
+    }
+
     if args.threads < 1:
-        raise SystemExit("[-] --threads must be greater than 0")
+        raise SystemExit(
+            "[-] --threads must be greater than 0"
+        )
 
     if args.timeout <= 0:
-        raise SystemExit("[-] --timeout must be greater than 0")
+        raise SystemExit(
+            "[-] --timeout must be greater than 0"
+        )
 
     print("[*] Murayama Recon Automation Toolkit")
     print(f"[*] Target: {args.target}")
@@ -182,6 +208,8 @@ def main():
 
         try:
             dns_results = enumerate_dns(args.target)
+
+            recon_results["dns"] = dns_results
 
             for record_type, records in dns_results.items():
                 print(f"\n    {record_type}:")
@@ -206,6 +234,8 @@ def main():
                 timeout=args.timeout,
             )
 
+            recon_results["subdomains"] = subdomains
+
             if wildcard_addresses:
                 print(
                     "[!] Wildcard DNS detected: "
@@ -214,10 +244,13 @@ def main():
 
             if subdomains:
                 for result in subdomains:
-                    addresses = ", ".join(result["addresses"])
+                    addresses = ", ".join(
+                        result["addresses"]
+                    )
 
                     print(
-                        f"    {result['subdomain']} -> {addresses}"
+                        f"    {result['subdomain']} "
+                        f"-> {addresses}"
                     )
             else:
                 print("    No subdomains found")
@@ -240,6 +273,8 @@ def main():
                 timeout=args.timeout,
             )
 
+            recon_results["ports"] = port_results
+
             if port_results:
                 for result in port_results:
                     print(
@@ -261,7 +296,8 @@ def main():
             web_ports = [
                 result["port"]
                 for result in port_results
-                if result["port"] in {80, 443, 8080, 8443}
+                if result["port"]
+                in {80, 443, 8080, 8443}
             ]
 
         if web_ports:
@@ -276,6 +312,10 @@ def main():
 
                 if result:
                     http_results.append(result)
+
+                    recon_results["http"].append(
+                        result
+                    )
                 else:
                     print(
                         f"    Port {port}: "
@@ -286,7 +326,9 @@ def main():
                 for result in http_results:
                     print_http_result(result)
             else:
-                print("    No HTTP/HTTPS service detected")
+                print(
+                    "    No HTTP/HTTPS service detected"
+                )
 
         else:
             result = analyze_http(
@@ -295,9 +337,26 @@ def main():
             )
 
             if result:
+                recon_results["http"].append(
+                    result
+                )
+
                 print_http_result(result)
             else:
-                print("    No HTTP/HTTPS service detected")
+                print(
+                    "    No HTTP/HTTPS service detected"
+                )
+
+    if args.output:
+        save_json(
+            recon_results,
+            args.output,
+        )
+
+        print(
+            f"\n[+] Results saved to: "
+            f"{args.output}"
+        )
 
 
 if __name__ == "__main__":
