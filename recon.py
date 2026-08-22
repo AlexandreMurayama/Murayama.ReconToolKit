@@ -1,5 +1,6 @@
 import argparse
 from recon.dns import enumerate_dns
+from recon.subdomains import enumerate_subdomains
 
 
 def parse_args():
@@ -64,7 +65,26 @@ def main():
             print(f"[-] {error}")
 
     if args.subdomains:
-        print("[+] Subdomain enumeration enabled")
+        print("\n[+] Subdomain Enumeration")
+
+        try:
+            subdomains, wildcard_addresses = enumerate_subdomains(
+                args.target,
+                "wordlists/subdomains.txt"
+            )
+
+            if subdomains:
+                for result in subdomains:
+                    addresses = ", ".join(result["addresses"])
+
+                    print(
+                        f"    {result['subdomain']} -> {addresses}"
+                    )
+            else:
+                print("    No subdomains found")
+
+        except FileNotFoundError as error:
+            print(f"[-] {error}")
 
     if args.ports:
         print("[+] Port scanning enabled")
