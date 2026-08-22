@@ -2,6 +2,7 @@ import argparse
 from recon.dns import enumerate_dns
 from recon.subdomains import enumerate_subdomains
 from recon.ports import scan_ports
+from recon.http import analyze_http
 
 COMMON_PORTS = [
     21,
@@ -185,20 +186,22 @@ def main():
         except FileNotFoundError as error:
             print(f"[-] {error}")
 
+    port_results = []
+
     if args.ports:
         print("\n[+] Port Scan")
 
         ports_to_scan = get_ports_to_scan(args)
 
-        results = scan_ports(
+        port_results  = scan_ports(
             target=args.target,
             ports=ports_to_scan,
             threads=args.threads,
             timeout=args.timeout,
         )
 
-        if results:
-            for result in results:
+        if port_results :
+            for result in port_results :
                 print(
                     f"    {result['port']}/tcp "
                     f"open ({result['service']})"
@@ -207,7 +210,64 @@ def main():
             print("    No open ports found")
 
     if args.http:
-        print("[+] HTTP reconnaissance enabled")
+        print("\n[+] HTTP Reconnaissance")
+
+        web_ports = []
+
+        if port_results:
+            web_ports = [
+                result["port"]
+                for result in port_results
+                if result["port"] in {80, 443, 8080, 8443}
+            ]
+
+        if web_ports:
+            http_results = []
+
+            for port in web_ports:
+                result = analyze_http(
+                    target=args.target,
+                    port=port,
+                    timeout=args.timeout,
+                )
+
+                if result:
+                    http_results.append(result)
+                else:
+                    print(
+                        f"    Port {port}: no valid HTTP/HTTPS response"
+                    )
+
+            if http_results:
+                for result in http_results:
+                    print(f"\n    URL:          {result['url']}")
+                    print(f"    Status:       {result['status']}")
+                    print(f"    Server:       {result['server']}")
+                    print(f"    Content-Type: {result['content_type']}")
+                    print(
+                        f"    Title:        "
+                        f"{result['title'] or 'unknown'}"
+                    )
+            else:
+                print("    No HTTP/HTTPS service detected")
+
+        else:
+            result = analyze_http(
+                target=args.target,
+                timeout=args.timeout,
+            )
+
+            if result:
+                print(f"    URL:          {result['url']}")
+                print(f"    Status:       {result['status']}")
+                print(f"    Server:       {result['server']}")
+                print(f"    Content-Type: {result['content_type']}")
+                print(
+                    f"    Title:        "
+                    f"{result['title'] or 'unknown'}"
+                )
+            else:
+                print("    No HTTP/HTTPS service detected")
 
 
 if __name__ == "__main__":
