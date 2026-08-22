@@ -37,11 +37,37 @@ def parse_args():
         help="Perform HTTP reconnaissance"
     )
 
+    parser.add_argument(
+        "--wordlist",
+        default="wordlists/subdomains.txt",
+        help="Path to subdomain wordlist"
+    )
+
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=10,
+        help="Number of concurrent threads"
+    )
+
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=2.0,
+        help="DNS query timeout in seconds"
+    )
+
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+
+    if args.threads < 1:
+        raise SystemExit("[-] --threads must be greater than 0")
+
+    if args.timeout <= 0:
+        raise SystemExit("[-] --timeout must be greater than 0")
 
     print("[*] Murayama Recon Automation Toolkit")
     print(f"[*] Target: {args.target}")
@@ -69,8 +95,10 @@ def main():
 
         try:
             subdomains, wildcard_addresses = enumerate_subdomains(
-                args.target,
-                "wordlists/subdomains.txt"
+                target=args.target,
+                wordlist_path=args.wordlist,
+                threads=args.threads,
+                timeout=args.timeout,
             )
 
             if subdomains:
