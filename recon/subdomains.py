@@ -16,33 +16,39 @@ def _generate_random_subdomain(length: int = 16) -> str:
     )
 
 
-def _resolve_ipv4(hostname: str, timeout: float) -> list[str]:
+def _resolve_addresses(hostname: str, timeout: float) -> list[str]:
     resolver = dns.resolver.Resolver()
     resolver.timeout = timeout
     resolver.lifetime = timeout
 
-    try:
-        answers = resolver.resolve(hostname, "A")
+    addresses = set()
 
-        return sorted(
-            answer.to_text()
-            for answer in answers
-        )
+    for record_type in ("A", "AAAA"):
+        try:
+            answers = resolver.resolve(
+                hostname,
+                record_type,
+            )
 
-    except (
-        dns.resolver.NXDOMAIN,
-        dns.resolver.NoAnswer,
-        dns.resolver.Timeout,
-        dns.resolver.NoNameservers,
-    ):
-        return []
+            for answer in answers:
+                addresses.add(answer.to_text())
+
+        except (
+            dns.resolver.NXDOMAIN,
+            dns.resolver.NoAnswer,
+            dns.resolver.Timeout,
+            dns.resolver.NoNameservers,
+        ):
+            continue
+
+    return sorted(addresses)
 
 
 def detect_wildcard_dns(target: str, timeout: float) -> list[str]:
     random_prefix = _generate_random_subdomain()
     random_hostname = f"{random_prefix}.{target}"
 
-    return _resolve_ipv4(random_hostname, timeout)
+    return _resolve_addresses(random_hostname, timeout)
 
 
 def _check_subdomain(
@@ -51,7 +57,7 @@ def _check_subdomain(
     timeout: float,
 ) -> dict | None:
     subdomain = f"{prefix}.{target}"
-    addresses = _resolve_ipv4(subdomain, timeout)
+    addresses = _resolve_addresses(subdomain, timeout)
 
     if not addresses:
         return None

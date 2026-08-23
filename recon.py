@@ -9,6 +9,7 @@ from recon.nmap import run_nmap
 from recon.output import save_json
 from recon.ports import scan_ports
 from recon.subdomains import enumerate_subdomains
+from recon.subfinder import run_subfinder
 
 
 def parse_args():
@@ -31,6 +32,12 @@ def parse_args():
         "--subdomains",
         action="store_true",
         help="Perform subdomain enumeration"
+    )
+
+    parser.add_argument(
+        "--subfinder",
+        action="store_true",
+        help="Perform passive subdomain discovery with Subfinder"
     )
 
     parser.add_argument(
@@ -155,6 +162,56 @@ def print_nmap_result(result: dict):
         print(f"        {details}")
 
 
+def merge_subdomain_results(
+    native_results: list[dict],
+    passive_results: list[dict],
+) -> list[dict]:
+    merged = {}
+
+    for source_name, results in (
+        ("native", native_results),
+        ("subfinder", passive_results),
+    ):
+        for result in results:
+            hostname = result["subdomain"]
+
+            if hostname not in merged:
+                merged[hostname] = {
+                    "subdomain": hostname,
+                    "addresses": set(),
+                    "sources": set(),
+                }
+
+            merged[hostname]["addresses"].update(
+                result["addresses"]
+            )
+
+            merged[hostname]["sources"].add(
+                source_name
+            )
+
+    normalized = []
+
+    for item in merged.values():
+        normalized.append(
+            {
+                "subdomain": item["subdomain"],
+                "addresses": sorted(
+                    item["addresses"]
+                ),
+                "sources": sorted(
+                    item["sources"]
+                ),
+            }
+        )
+
+    normalized.sort(
+        key=lambda item: item["subdomain"]
+    )
+
+    return normalized
+
+
 def main():
     args = parse_args()
 
@@ -182,6 +239,8 @@ def main():
         "target": args.target,
         "dns": {},
         "subdomains": [],
+        "subfinder": [],
+        "discovered_subdomains": [],
         "ports": [],
         "nmap": [],
         "http": [],
@@ -212,18 +271,21 @@ def main():
             print(f"[-] {error}")
 
     # Subdomain Enumeration
+    native_subdomains = []
+    passive_subdomains = []
+
     if args.subdomains:
         print("\n[+] Subdomain Enumeration")
 
         try:
-            subdomains, wildcard_addresses = enumerate_subdomains(
+            native_subdomains, wildcard_addresses = enumerate_subdomains(
                 target=args.target,
                 wordlist_path=args.wordlist,
                 threads=args.threads,
                 timeout=args.timeout,
             )
 
-            recon_results["subdomains"] = subdomains
+            recon_results["subdomains"] = native_subdomains
 
             if wildcard_addresses:
                 print(
@@ -231,8 +293,8 @@ def main():
                     + ", ".join(wildcard_addresses)
                 )
 
-            if subdomains:
-                for result in subdomains:
+            if native_subdomains:
+                for result in native_subdomains:
                     addresses = ", ".join(
                         result["addresses"]
                     )
@@ -246,6 +308,76 @@ def main():
 
         except FileNotFoundError as error:
             print(f"[-] {error}")
+
+    if args.subfinder:
+        print("\n[+] Passive Subdomain Discovery (Subfinder)")
+
+        try:
+            passive_subdomains, candidate_count = run_subfinder(
+                target=args.target,
+                threads=args.threads,
+                timeout=120.0,
+                dns_timeout=args.timeout,
+            )
+
+            print(
+                f"    Candidates discovered: {candidate_count}"
+            )
+
+            print(
+                f"    DNS validated: {len(passive_subdomains)}"
+            )
+
+            recon_results["subfinder"] = passive_subdomains
+
+            if passive_subdomains:
+                for result in passive_subdomains:
+                    addresses = ", ".join(
+                        result["addresses"]
+                    )
+
+                    print(
+                        f"    {result['subdomain']} "
+                        f"-> {addresses}"
+                    )
+            else:
+                print("    No validated passive subdomains found")
+
+        except ValueError as error:
+            print(f"[-] {error}")
+
+    if args.subdomains or args.subfinder:
+        discovered_subdomains = merge_subdomain_results(
+            native_results=native_subdomains,
+            passive_results=passive_subdomains,
+        )
+
+        recon_results["discovered_subdomains"] = (
+            discovered_subdomains
+        )
+
+        print("\n[+] Consolidated Subdomain Results")
+
+        if discovered_subdomains:
+            for result in discovered_subdomains:
+                addresses = ", ".join(
+                    result["addresses"]
+                )
+
+                sources = ", ".join(
+                    result["sources"]
+                )
+
+                print(
+                    f"    {result['subdomain']} "
+                    f"-> {addresses}"
+                )
+
+                print(
+                    f"        Sources: {sources}"
+                )
+        else:
+            print("    No consolidated subdomains found")
 
     port_results = []
 
