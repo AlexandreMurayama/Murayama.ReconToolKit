@@ -1,6 +1,5 @@
 import argparse
 from datetime import datetime, timezone
-
 from recon.cli import get_ports_to_scan
 from recon.dns import enumerate_dns
 from recon.http import analyze_http
@@ -10,6 +9,7 @@ from recon.output import save_json
 from recon.ports import scan_ports
 from recon.subdomains import enumerate_subdomains
 from recon.subfinder import run_subfinder
+from recon.banner import print_banner
 
 
 def parse_args():
@@ -214,6 +214,8 @@ def merge_subdomain_results(
 
 def main():
     args = parse_args()
+
+    print_banner()
 
     configure_logging(args.verbose)
 
