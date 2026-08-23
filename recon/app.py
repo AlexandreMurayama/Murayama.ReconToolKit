@@ -10,6 +10,7 @@ from recon.ports import scan_ports
 from recon.subdomains import enumerate_subdomains
 from recon.subfinder import run_subfinder
 from recon.banner import print_banner
+from recon.banner_grabber import grab_banners
 
 
 def parse_args():
@@ -44,6 +45,12 @@ def parse_args():
         "--ports",
         action="store_true",
         help="Perform port scanning"
+    )
+
+    parser.add_argument(
+        "--banners",
+        action="store_true",
+        help="Grab service banners from discovered open ports"
     )
 
     parser.add_argument(
@@ -234,6 +241,11 @@ def main():
             "[-] --nmap requires --ports"
         )
 
+    if args.banners and not args.ports:
+        raise SystemExit(
+            "[-] --banners requires --ports"
+        )
+
     recon_results = {
         "tool": "Murayama Recon Automation Toolkit",
         "version": "0.1.0",
@@ -244,6 +256,7 @@ def main():
         "subfinder": [],
         "discovered_subdomains": [],
         "ports": [],
+        "banners": [],
         "nmap": [],
         "http": [],
     }
@@ -407,6 +420,37 @@ def main():
                     )
             else:
                 print("    No open ports found")
+
+            if args.banners and port_results:
+                print("\n[+] Banner Grabbing")
+
+                discovered_ports = [
+                    result["port"]
+                    for result in port_results
+                ]
+
+                banner_results = grab_banners(
+                    target=args.target,
+                    ports=discovered_ports,
+                    timeout=args.timeout,
+                    threads=args.threads,
+                )
+
+                recon_results["banners"] = banner_results
+
+                if banner_results:
+                    for result in banner_results:
+                        print(
+                            f"    {result['port']}/tcp"
+                        )
+
+                        print(
+                            f"        {result['banner']}"
+                        )
+                else:
+                    print(
+                        "    No service banners received"
+                    )
 
             # Nmap enrichment
             if args.nmap and port_results:
