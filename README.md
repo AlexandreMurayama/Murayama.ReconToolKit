@@ -1,44 +1,61 @@
 # Murayama Recon Automation Toolkit
 
-[English](README.md) | [Português (Brasil)](README-PT-BR.md)
+[English](README.md) \| [Português (Brasil)](README-PT-BR.md)
 
-A modular Python reconnaissance toolkit built for authorized cybersecurity assessments, security labs, and educational use.
+A modular Python reconnaissance toolkit built for authorized
+cybersecurity assessments, security labs, and educational use.
 
-The project combines **native reconnaissance components implemented in Python** with optional integrations for established security tools. Its goal is not to replace tools such as Nmap or Subfinder, but to demonstrate how reconnaissance stages can be automated, validated, correlated, and exported through a single workflow.
+The project combines **native reconnaissance components implemented in
+Python** with optional integrations for established security tools. Its
+goal is not to replace tools such as Nmap or Subfinder, but to
+demonstrate how reconnaissance stages can be automated, validated,
+correlated, and exported through a single workflow.
 
-> **Authorized use only.** Run this toolkit only against systems you own or systems for which you have explicit permission to perform security testing.
+> **Authorized use only.** Run this toolkit only against systems you own
+> or systems for which you have explicit permission to perform security
+> testing.
 
 ## Features
 
 ### Native components
 
-- DNS enumeration (`A`, `AAAA`, `MX`, `NS`, `TXT`)
-- Concurrent subdomain enumeration using wordlists
-- Wildcard DNS detection
-- IPv4 and IPv6 subdomain resolution
-- Concurrent TCP port scanning
-- Common service identification
-- HTTP/HTTPS reconnaissance
-- HTML title extraction
-- Basic technology fingerprinting
-- HTTP security header analysis
-- Subdomain result correlation and deduplication
-- JSON report generation
-- Verbose/debug logging
-- Automated tests with pytest
-- Installable command-line interface (`murayama-recon`)
-- Custom MurayamaRecon terminal banner
+-   DNS enumeration (`A`, `AAAA`, `MX`, `NS`, `TXT`)
+-   Concurrent subdomain enumeration using wordlists
+-   Wildcard DNS detection
+-   IPv4 and IPv6 subdomain resolution
+-   Concurrent TCP port scanning
+-   Native concurrent service banner grabbing
+-   Active HTTP and HTTPS/TLS banner probes
+-   Passive banner collection for services that identify themselves on
+    connection
+-   SMTP probing support
+-   Common service identification
+-   HTTP/HTTPS reconnaissance
+-   HTML title extraction
+-   Basic technology fingerprinting
+-   HTTP security header analysis
+-   Subdomain result correlation and deduplication
+-   JSON report generation
+-   Verbose/debug logging
+-   Automated tests with pytest
+-   Installable command-line interface (`murayama-recon`)
+-   Custom MurayamaRecon terminal banner
 
 ### External enrichment
 
-- **Nmap** — enriches ports discovered by the native scanner with service/product/version information
-- **Subfinder** — adds passive subdomain discovery, followed by DNS validation performed by the toolkit
+-   **Nmap** --- enriches ports discovered by the native scanner with
+    service/product/version information
+-   **Subfinder** --- adds passive subdomain discovery, followed by DNS
+    validation performed by the toolkit
 
-The native scanner remains responsible for initial port discovery. Nmap is an optional enrichment stage. Likewise, passive Subfinder results are treated as **candidates**, not confirmed assets, until they successfully resolve through DNS.
+The native scanner remains responsible for initial port discovery. Nmap
+is an optional enrichment stage. Likewise, passive Subfinder results are
+treated as **candidates**, not confirmed assets, until they successfully
+resolve through DNS.
 
 ## Architecture
 
-```text
+``` text
                          Target
                            |
           +----------------+----------------+
@@ -72,12 +89,13 @@ The native scanner remains responsible for initial port discovery. Nmap is an op
 
 ## Project structure
 
-```text
+``` text
 Murayama.ReconToolKit/
 ├── recon/
 │   ├── __init__.py
 │   ├── app.py
 │   ├── banner.py
+│   ├── banner_grabber.py
 │   ├── cli.py
 │   ├── cli_entry.py
 │   ├── dns.py
@@ -103,16 +121,17 @@ Murayama.ReconToolKit/
 
 ## Requirements
 
-- Python 3
-- pip
-- Nmap (optional, required only for `--nmap`)
-- Subfinder (optional, required only for `--subfinder`)
+-   Python 3
+-   pip
+-   Nmap (optional, required only for `--nmap`)
+-   Subfinder (optional, required only for `--subfinder`)
 
-The toolkit was developed and tested on Windows. External tools must be available through the system `PATH`.
+The toolkit was developed and tested on Windows. External tools must be
+available through the system `PATH`.
 
 Check the installations with:
 
-```bash
+``` bash
 python --version
 nmap --version
 subfinder --version
@@ -122,84 +141,89 @@ subfinder --version
 
 Clone the repository and enter the project directory:
 
-```bash
+``` bash
 git clone <repository-url>
 cd Murayama.ReconToolKit
 ```
 
 Create a virtual environment:
 
-```bash
+``` bash
 python -m venv .venv
 ```
 
 Activate it on Windows Git Bash:
 
-```bash
+``` bash
 source .venv/Scripts/activate
 ```
 
 On Windows Command Prompt:
 
-```cmd
+``` cmd
 .venv\Scripts\activate
 ```
 
 On Windows PowerShell:
 
-```powershell
+``` powershell
 .venv\Scripts\Activate.ps1
 ```
 
 On Linux/macOS:
 
-```bash
+``` bash
 source .venv/bin/activate
 ```
 
 Install the project dependencies:
 
-```bash
+``` bash
 python -m pip install -r requirements.txt
 ```
 
 Install the toolkit as an editable Python CLI:
 
-```bash
+``` bash
 python -m pip install -e .
 ```
 
-After installation, the toolkit can be executed directly from the terminal:
+After installation, the toolkit can be executed directly from the
+terminal:
 
-```bash
+``` bash
 murayama-recon --help
 ```
 
-The editable installation is useful during development because changes to the source code are immediately reflected without reinstalling the package.
+The editable installation is useful during development because changes
+to the source code are immediately reflected without reinstalling the
+package.
 
 ## Command-line interface
 
-The project is packaged as a command-line tool. You do **not** need PyCharm or another IDE to run it after installation.
+The project is packaged as a command-line tool. You do **not** need
+PyCharm or another IDE to run it after installation.
 
 General syntax:
 
-```bash
+``` bash
 murayama-recon TARGET [OPTIONS]
 ```
 
 Display all available options:
 
-```bash
+``` bash
 murayama-recon --help
 ```
 
 The toolkit currently supports:
 
-```text
+``` text
 --dns                 Perform DNS enumeration
 --subdomains          Perform native subdomain enumeration
 --subfinder           Perform passive discovery with Subfinder
 --ports               Perform native TCP port scanning
+--banners             Grab service banners from discovered open ports
 --http                Perform HTTP reconnaissance
 --wordlist PATH       Path to the subdomain wordlist
 --threads NUMBER      Number of concurrent threads
@@ -211,31 +235,35 @@ The toolkit currently supports:
 --verbose             Enable verbose/debug logging
 ```
 
-Use `murayama-recon --help` as the authoritative reference for the version currently checked out.
+Use `murayama-recon --help` as the authoritative reference for the
+version currently checked out.
 
 ## Startup banner
 
-When the toolkit starts, it displays the custom **MurayamaRecon** terminal banner together with the toolkit version and authorized-use notice.
+When the toolkit starts, it displays the custom **MurayamaRecon**
+terminal banner together with the toolkit version and authorized-use
+notice.
 
-The banner is implemented separately from the reconnaissance logic so presentation remains isolated from the functional modules.
+The banner is implemented separately from the reconnaissance logic so
+presentation remains isolated from the functional modules.
 
 ## Usage examples
 
 ### DNS enumeration
 
-```bash
+``` bash
 murayama-recon example.com --dns
 ```
 
 ### Native subdomain enumeration
 
-```bash
+``` bash
 murayama-recon example.com --subdomains
 ```
 
 Use a custom wordlist and concurrency settings:
 
-```bash
+``` bash
 murayama-recon example.com \
   --subdomains \
   --wordlist wordlists/subdomains.txt \
@@ -245,31 +273,35 @@ murayama-recon example.com \
 
 ### Passive discovery with Subfinder
 
-```bash
+``` bash
 murayama-recon example.com \
   --subfinder \
   --threads 20 \
   --timeout 1
 ```
 
-Subfinder results are first collected as passive candidates and then validated through DNS. This prevents historical or stale passive records from automatically being reported as confirmed assets.
+Subfinder results are first collected as passive candidates and then
+validated through DNS. This prevents historical or stale passive records
+from automatically being reported as confirmed assets.
 
-A validation run against `example.com` during development demonstrated the difference clearly:
+A validation run against `example.com` during development demonstrated
+the difference clearly:
 
-```text
+``` text
 [+] Passive Subdomain Discovery (Subfinder)
     Candidates discovered: 24948
     DNS validated: 1
     www.example.com -> ...
 ```
 
-Passive-source results can change over time, so these counts are examples rather than expected fixed values.
+Passive-source results can change over time, so these counts are
+examples rather than expected fixed values.
 
 ### Consolidated subdomain discovery
 
 Run the native and passive methods together:
 
-```bash
+``` bash
 murayama-recon example.com \
   --subdomains \
   --subfinder \
@@ -277,9 +309,10 @@ murayama-recon example.com \
   --timeout 1
 ```
 
-The toolkit merges duplicate hosts and records which discovery mechanisms identified each one:
+The toolkit merges duplicate hosts and records which discovery
+mechanisms identified each one:
 
-```text
+``` text
 [+] Consolidated Subdomain Results
     www.example.com -> ...
         Sources: native, subfinder
@@ -289,33 +322,70 @@ The toolkit merges duplicate hosts and records which discovery mechanisms identi
 
 Scan the default common-port set:
 
-```bash
+``` bash
 murayama-recon localhost --ports
 ```
 
 Scan a single port:
 
-```bash
+``` bash
 murayama-recon localhost --ports --port 8080
 ```
 
 Scan a range:
 
-```bash
+``` bash
 murayama-recon localhost --ports --port-range 1-1024
 ```
 
-The target is not limited to `localhost`. The toolkit can operate against remote hosts and domains when testing is authorized.
+The target is not limited to `localhost`. The toolkit can operate
+against remote hosts and domains when testing is authorized.
+
+### Native banner grabbing
+
+Banner grabbing is performed after the native port scanner discovers
+open TCP ports:
+
+``` bash
+murayama-recon localhost --ports --banners
+```
+
+The banner module uses concurrent workers and combines passive and
+active techniques. Services such as SSH and FTP may identify themselves
+immediately after connection, while HTTP services are actively probed.
+HTTPS on the conventional TLS ports uses a TLS handshake before the HTTP
+probe, and SMTP ports support protocol-aware probing.
+
+Example:
+
+``` text
+[+] Port Scan
+    8080/tcp open (http-alt)
+
+[+] Banner Grabbing
+    8080/tcp
+        HTTP/1.1 404 Not Found
+        Connection: close
+        Server: Kestrel
+```
+
+A `404 Not Found` response is still useful reconnaissance evidence: it
+confirms that an HTTP service answered the request and may expose
+identifying headers such as `Server`.
+
+Banner grabbing and Nmap enrichment are complementary. The native module
+demonstrates direct socket/protocol interaction, while Nmap provides
+deeper service fingerprinting.
 
 ### Nmap service enrichment
 
-```bash
+``` bash
 murayama-recon localhost --ports --nmap
 ```
 
 The workflow is intentionally separated:
 
-```text
+``` text
 Native scanner
       |
       v
@@ -327,7 +397,7 @@ Nmap service enrichment
 
 Example:
 
-```text
+``` text
 [+] Port Scan
     8080/tcp open (http-alt)
 
@@ -336,23 +406,24 @@ Example:
         Microsoft Kestrel httpd
 ```
 
-The native scanner remains responsible for discovery, while Nmap complements it with deeper service fingerprinting.
+The native scanner remains responsible for discovery, while Nmap
+complements it with deeper service fingerprinting.
 
 ### HTTP reconnaissance
 
-```bash
+``` bash
 murayama-recon example.com --http
 ```
 
 Combine port discovery and HTTP reconnaissance:
 
-```bash
+``` bash
 murayama-recon example.com --ports --http
 ```
 
 The HTTP stage can collect information such as:
 
-```text
+``` text
 URL
 HTTP status
 Server header
@@ -364,18 +435,19 @@ Security headers
 
 Security headers currently checked include:
 
-- `Strict-Transport-Security`
-- `Content-Security-Policy`
-- `X-Frame-Options`
-- `X-Content-Type-Options`
-- `Referrer-Policy`
-- `Permissions-Policy`
+-   `Strict-Transport-Security`
+-   `Content-Security-Policy`
+-   `X-Frame-Options`
+-   `X-Content-Type-Options`
+-   `Referrer-Policy`
+-   `Permissions-Policy`
 
-A missing header is reported as an observation; its security impact depends on the application and deployment context.
+A missing header is reported as an observation; its security impact
+depends on the application and deployment context.
 
 ### JSON output
 
-```bash
+``` bash
 murayama-recon example.com \
   --dns \
   --subdomains \
@@ -384,11 +456,12 @@ murayama-recon example.com \
   --output output/example.com.json
 ```
 
-Reports contain metadata and results from the enabled stages, including consolidated subdomain data when applicable.
+Reports contain metadata and results from the enabled stages, including
+consolidated subdomain data when applicable.
 
 Example structure:
 
-```json
+``` json
 {
   "tool": "Murayama Recon Automation Toolkit",
   "version": "0.1.0",
@@ -398,6 +471,7 @@ Example structure:
   "subfinder": [],
   "discovered_subdomains": [],
   "ports": [],
+  "banners": [],
   "nmap": [],
   "http": []
 }
@@ -405,37 +479,66 @@ Example structure:
 
 ### Verbose logging
 
-```bash
+``` bash
 murayama-recon example.com --ports --http --verbose
 ```
 
-Verbose mode exposes additional diagnostic information useful during development and troubleshooting.
+Verbose mode exposes additional diagnostic information useful during
+development and troubleshooting.
 
 ## Testing
 
 Run the automated test suite with:
 
-```bash
+``` bash
 python -m pytest -v
 ```
 
-The current test suite covers CLI port parsing, port-scanner behavior, HTTP title extraction, technology/security-header analysis, and JSON output.
+The current test suite covers CLI port parsing, port-scanner behavior,
+HTTP title extraction, technology/security-header analysis, and JSON
+output.
 
 ## Design decisions
 
-### Native scanner + Nmap
+### Native scanner + banner grabber + Nmap
 
-The project deliberately keeps its own concurrent TCP scanner instead of delegating discovery entirely to Nmap. This demonstrates socket programming and concurrency while allowing Nmap to perform the job at which it excels: deeper service fingerprinting.
+The toolkit separates three reconnaissance layers:
+
+``` text
+Native TCP scanner
+        |
+        v
+    Open ports
+     /      \
+    v        v
+Native      Nmap
+banner      enrichment
+grabber
+```
+
+The native banner grabber interacts directly with discovered services
+using sockets and protocol-aware probes. Nmap remains optional and
+provides more advanced service/product fingerprinting. This makes the
+two mechanisms complementary rather than redundant.
+
+The project deliberately keeps its own concurrent TCP scanner instead of
+delegating discovery entirely to Nmap. This demonstrates socket
+programming and concurrency while allowing Nmap to perform the job at
+which it excels: deeper service fingerprinting.
 
 ### Native enumeration + Subfinder
 
-Wordlist-based DNS enumeration and passive discovery provide different perspectives. Subfinder expands passive coverage, while the toolkit validates returned candidates through DNS before considering them confirmed.
+Wordlist-based DNS enumeration and passive discovery provide different
+perspectives. Subfinder expands passive coverage, while the toolkit
+validates returned candidates through DNS before considering them
+confirmed.
 
 ### Correlation instead of duplicated output
 
-When a host is identified by more than one mechanism, the toolkit consolidates it and preserves the discovery sources:
+When a host is identified by more than one mechanism, the toolkit
+consolidates it and preserves the discovery sources:
 
-```json
+``` json
 {
   "subdomain": "www.example.com",
   "addresses": [
@@ -453,32 +556,38 @@ The actual address set may also contain IPv6 addresses.
 
 ### Installable CLI
 
-The toolkit is packaged through `pyproject.toml` and exposes the `murayama-recon` command. This separates normal tool usage from the internal Python module layout and allows the project to behave like a conventional command-line security utility.
+The toolkit is packaged through `pyproject.toml` and exposes the
+`murayama-recon` command. This separates normal tool usage from the
+internal Python module layout and allows the project to behave like a
+conventional command-line security utility.
 
 ## Roadmap
 
 Potential future improvements include:
 
-- Additional passive reconnaissance sources
-- Configurable port profiles
-- Improved service fingerprinting
-- TLS/certificate inspection
-- HTTP redirect-chain analysis
-- Additional technology fingerprints
-- CSV/HTML reporting
-- Expanded automated tests
-- CI security and quality checks
+-   Additional passive reconnaissance sources
+-   Configurable port profiles
+-   Additional protocol-aware banner probes
+-   Improved service fingerprinting
+-   TLS/certificate inspection
+-   HTTP redirect-chain analysis
+-   Additional technology fingerprints
+-   CSV/HTML reporting
+-   Expanded automated tests
+-   CI security and quality checks
 
 ## Ethical use
 
-Reconnaissance can generate network traffic and expose information about systems. Use this project only on:
+Reconnaissance can generate network traffic and expose information about
+systems. Use this project only on:
 
-- systems you own;
-- intentionally vulnerable labs;
-- CTF environments where testing is permitted;
-- environments for which you have explicit authorization.
+-   systems you own;
+-   intentionally vulnerable labs;
+-   CTF environments where testing is permitted;
+-   environments for which you have explicit authorization.
 
-The project is intended for cybersecurity education, portfolio development, and authorized security assessment workflows.
+The project is intended for cybersecurity education, portfolio
+development, and authorized security assessment workflows.
 
 ## Author
 
