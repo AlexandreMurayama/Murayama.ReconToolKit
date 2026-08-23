@@ -26,6 +26,8 @@ The project combines **native reconnaissance components implemented in Python** 
 - JSON report generation
 - Verbose/debug logging
 - Automated tests with pytest
+- Installable command-line interface (`murayama-recon`)
+- Custom MurayamaRecon terminal banner
 
 ### External enrichment
 
@@ -74,7 +76,10 @@ The native scanner remains responsible for initial port discovery. Nmap is an op
 Murayama.ReconToolKit/
 ├── recon/
 │   ├── __init__.py
+│   ├── app.py
+│   ├── banner.py
 │   ├── cli.py
+│   ├── cli_entry.py
 │   ├── dns.py
 │   ├── http.py
 │   ├── logger.py
@@ -88,10 +93,12 @@ Murayama.ReconToolKit/
 ├── wordlists/
 │   └── subdomains.txt
 ├── output/
-├── recon.py
+│   └── .gitkeep
+├── pyproject.toml
 ├── requirements.txt
 ├── pytest.ini
-└── README.md
+├── README.md
+└── README-PT-BR.md
 ```
 
 ## Requirements
@@ -113,7 +120,7 @@ subfinder --version
 
 ## Installation
 
-Clone the repository:
+Clone the repository and enter the project directory:
 
 ```bash
 git clone <repository-url>
@@ -126,10 +133,22 @@ Create a virtual environment:
 python -m venv .venv
 ```
 
-Activate it on Windows:
+Activate it on Windows Git Bash:
 
 ```bash
+source .venv/Scripts/activate
+```
+
+On Windows Command Prompt:
+
+```cmd
 .venv\Scripts\activate
+```
+
+On Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
 ```
 
 On Linux/macOS:
@@ -138,18 +157,40 @@ On Linux/macOS:
 source .venv/bin/activate
 ```
 
-Install Python dependencies:
+Install the project dependencies:
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-## CLI
+Install the toolkit as an editable Python CLI:
+
+```bash
+python -m pip install -e .
+```
+
+After installation, the toolkit can be executed directly from the terminal:
+
+```bash
+murayama-recon --help
+```
+
+The editable installation is useful during development because changes to the source code are immediately reflected without reinstalling the package.
+
+## Command-line interface
+
+The project is packaged as a command-line tool. You do **not** need PyCharm or another IDE to run it after installation.
+
+General syntax:
+
+```bash
+murayama-recon TARGET [OPTIONS]
+```
 
 Display all available options:
 
 ```bash
-python recon.py --help
+murayama-recon --help
 ```
 
 The toolkit currently supports:
@@ -170,26 +211,32 @@ The toolkit currently supports:
 --verbose             Enable verbose/debug logging
 ```
 
-Use `python recon.py --help` as the authoritative reference for the version currently checked out.
+Use `murayama-recon --help` as the authoritative reference for the version currently checked out.
+
+## Startup banner
+
+When the toolkit starts, it displays the custom **MurayamaRecon** terminal banner together with the toolkit version and authorized-use notice.
+
+The banner is implemented separately from the reconnaissance logic so presentation remains isolated from the functional modules.
 
 ## Usage examples
 
 ### DNS enumeration
 
 ```bash
-python recon.py example.com --dns
+murayama-recon example.com --dns
 ```
 
 ### Native subdomain enumeration
 
 ```bash
-python recon.py example.com --subdomains
+murayama-recon example.com --subdomains
 ```
 
-Use a custom wordlist:
+Use a custom wordlist and concurrency settings:
 
 ```bash
-python recon.py example.com \
+murayama-recon example.com \
   --subdomains \
   --wordlist wordlists/subdomains.txt \
   --threads 20 \
@@ -199,7 +246,7 @@ python recon.py example.com \
 ### Passive discovery with Subfinder
 
 ```bash
-python recon.py example.com \
+murayama-recon example.com \
   --subfinder \
   --threads 20 \
   --timeout 1
@@ -223,7 +270,7 @@ Passive-source results can change over time, so these counts are examples rather
 Run the native and passive methods together:
 
 ```bash
-python recon.py example.com \
+murayama-recon example.com \
   --subdomains \
   --subfinder \
   --threads 20 \
@@ -243,25 +290,27 @@ The toolkit merges duplicate hosts and records which discovery mechanisms identi
 Scan the default common-port set:
 
 ```bash
-python recon.py localhost --ports
+murayama-recon localhost --ports
 ```
 
 Scan a single port:
 
 ```bash
-python recon.py localhost --ports --port 8080
+murayama-recon localhost --ports --port 8080
 ```
 
 Scan a range:
 
 ```bash
-python recon.py localhost --ports --port-range 1-1024
+murayama-recon localhost --ports --port-range 1-1024
 ```
+
+The target is not limited to `localhost`. The toolkit can operate against remote hosts and domains when testing is authorized.
 
 ### Nmap service enrichment
 
 ```bash
-python recon.py localhost --ports --nmap
+murayama-recon localhost --ports --nmap
 ```
 
 The workflow is intentionally separated:
@@ -287,16 +336,18 @@ Example:
         Microsoft Kestrel httpd
 ```
 
+The native scanner remains responsible for discovery, while Nmap complements it with deeper service fingerprinting.
+
 ### HTTP reconnaissance
 
 ```bash
-python recon.py example.com --http
+murayama-recon example.com --http
 ```
 
 Combine port discovery and HTTP reconnaissance:
 
 ```bash
-python recon.py example.com --ports --http
+murayama-recon example.com --ports --http
 ```
 
 The HTTP stage can collect information such as:
@@ -325,7 +376,7 @@ A missing header is reported as an observation; its security impact depends on t
 ### JSON output
 
 ```bash
-python recon.py example.com \
+murayama-recon example.com \
   --dns \
   --subdomains \
   --ports \
@@ -355,7 +406,7 @@ Example structure:
 ### Verbose logging
 
 ```bash
-python recon.py example.com --ports --http --verbose
+murayama-recon example.com --ports --http --verbose
 ```
 
 Verbose mode exposes additional diagnostic information useful during development and troubleshooting.
@@ -368,7 +419,7 @@ Run the automated test suite with:
 python -m pytest -v
 ```
 
-The test suite covers components including CLI port parsing, port-scanner behavior, HTTP title extraction, technology/security-header analysis, and JSON output.
+The current test suite covers CLI port parsing, port-scanner behavior, HTTP title extraction, technology/security-header analysis, and JSON output.
 
 ## Design decisions
 
@@ -378,7 +429,7 @@ The project deliberately keeps its own concurrent TCP scanner instead of delegat
 
 ### Native enumeration + Subfinder
 
-Wordlist-based DNS enumeration and passive discovery provide different perspectives. Subfinder expands passive coverage, while the toolkit validates the returned candidates through DNS before considering them confirmed.
+Wordlist-based DNS enumeration and passive discovery provide different perspectives. Subfinder expands passive coverage, while the toolkit validates returned candidates through DNS before considering them confirmed.
 
 ### Correlation instead of duplicated output
 
@@ -400,6 +451,10 @@ When a host is identified by more than one mechanism, the toolkit consolidates i
 
 The actual address set may also contain IPv6 addresses.
 
+### Installable CLI
+
+The toolkit is packaged through `pyproject.toml` and exposes the `murayama-recon` command. This separates normal tool usage from the internal Python module layout and allows the project to behave like a conventional command-line security utility.
+
 ## Roadmap
 
 Potential future improvements include:
@@ -413,11 +468,10 @@ Potential future improvements include:
 - CSV/HTML reporting
 - Expanded automated tests
 - CI security and quality checks
-- Packaging as an installable Python CLI
 
 ## Ethical use
 
-Reconnaissance can generate network traffic and expose information about systems. Use this project only in:
+Reconnaissance can generate network traffic and expose information about systems. Use this project only on:
 
 - systems you own;
 - intentionally vulnerable labs;

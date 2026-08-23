@@ -26,6 +26,8 @@ O projeto combina **componentes nativos de reconhecimento implementados em Pytho
 - Geração de relatórios JSON
 - Logging verbose/debug
 - Testes automatizados com pytest
+- Interface de linha de comando instalável (`murayama-recon`)
+- Banner de terminal personalizado MurayamaRecon
 
 ### Enriquecimento externo
 
@@ -74,7 +76,10 @@ O scanner nativo continua responsável pela descoberta inicial de portas. O Nmap
 Murayama.ReconToolKit/
 ├── recon/
 │   ├── __init__.py
+│   ├── app.py
+│   ├── banner.py
 │   ├── cli.py
+│   ├── cli_entry.py
 │   ├── dns.py
 │   ├── http.py
 │   ├── logger.py
@@ -88,7 +93,8 @@ Murayama.ReconToolKit/
 ├── wordlists/
 │   └── subdomains.txt
 ├── output/
-├── recon.py
+│   └── .gitkeep
+├── pyproject.toml
 ├── requirements.txt
 ├── pytest.ini
 ├── README.md
@@ -114,7 +120,7 @@ subfinder --version
 
 ## Instalação
 
-Clone o repositório:
+Clone o repositório e entre no diretório do projeto:
 
 ```bash
 git clone <repository-url>
@@ -127,10 +133,22 @@ Crie um ambiente virtual:
 python -m venv .venv
 ```
 
-Ative no Windows:
+Ative no Windows usando Git Bash:
 
 ```bash
+source .venv/Scripts/activate
+```
+
+No Prompt de Comando:
+
+```cmd
 .venv\Scripts\activate
+```
+
+No PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
 ```
 
 No Linux/macOS:
@@ -145,12 +163,34 @@ Instale as dependências Python:
 python -m pip install -r requirements.txt
 ```
 
-## CLI
+Instale o toolkit como uma CLI Python em modo editável:
+
+```bash
+python -m pip install -e .
+```
+
+Depois da instalação, ele pode ser executado diretamente pelo terminal:
+
+```bash
+murayama-recon --help
+```
+
+A instalação editável é especialmente útil durante o desenvolvimento, pois alterações feitas no código-fonte passam a ser utilizadas pela CLI sem a necessidade de reinstalar o pacote.
+
+## Interface de linha de comando
+
+O projeto agora funciona como uma ferramenta de linha de comando. **Não é necessário utilizar PyCharm** ou outra IDE para executá-lo após a instalação.
+
+Sintaxe geral:
+
+```bash
+murayama-recon ALVO [OPÇÕES]
+```
 
 Para visualizar todas as opções:
 
 ```bash
-python recon.py --help
+murayama-recon --help
 ```
 
 O toolkit atualmente oferece:
@@ -171,26 +211,32 @@ O toolkit atualmente oferece:
 --verbose             Habilita logging verbose/debug
 ```
 
-Use `python recon.py --help` como referência definitiva para a versão do código que estiver utilizando.
+Use `murayama-recon --help` como referência definitiva para a versão do código que estiver utilizando.
+
+## Banner de inicialização
+
+Ao iniciar uma execução, o toolkit apresenta o banner personalizado **MurayamaRecon**, acompanhado da versão do toolkit e do aviso de uso exclusivo para testes autorizados.
+
+O banner fica separado da lógica de reconhecimento, mantendo a apresentação independente dos módulos funcionais da ferramenta.
 
 ## Exemplos de uso
 
 ### Enumeração DNS
 
 ```bash
-python recon.py example.com --dns
+murayama-recon example.com --dns
 ```
 
 ### Enumeração nativa de subdomínios
 
 ```bash
-python recon.py example.com --subdomains
+murayama-recon example.com --subdomains
 ```
 
 Com wordlist e parâmetros personalizados:
 
 ```bash
-python recon.py example.com \
+murayama-recon example.com \
   --subdomains \
   --wordlist wordlists/subdomains.txt \
   --threads 20 \
@@ -200,7 +246,7 @@ python recon.py example.com \
 ### Descoberta passiva com Subfinder
 
 ```bash
-python recon.py example.com \
+murayama-recon example.com \
   --subfinder \
   --threads 20 \
   --timeout 1
@@ -224,7 +270,7 @@ Os resultados das fontes passivas mudam ao longo do tempo, portanto essas quanti
 Execute os mecanismos nativo e passivo:
 
 ```bash
-python recon.py example.com \
+murayama-recon example.com \
   --subdomains \
   --subfinder \
   --threads 20 \
@@ -244,25 +290,27 @@ O toolkit deduplica os hosts e registra quais mecanismos encontraram cada ativo:
 Portas comuns:
 
 ```bash
-python recon.py localhost --ports
+murayama-recon localhost --ports
 ```
 
 Uma porta específica:
 
 ```bash
-python recon.py localhost --ports --port 8080
+murayama-recon localhost --ports --port 8080
 ```
 
 Intervalo de portas:
 
 ```bash
-python recon.py localhost --ports --port-range 1-1024
+murayama-recon localhost --ports --port-range 1-1024
 ```
+
+O toolkit não está limitado ao `localhost`. Ele pode operar contra hosts e domínios remotos quando houver autorização para o teste.
 
 ### Enriquecimento com Nmap
 
 ```bash
-python recon.py localhost --ports --nmap
+murayama-recon localhost --ports --nmap
 ```
 
 A separação é proposital:
@@ -293,13 +341,13 @@ Assim, o scanner desenvolvido no projeto continua responsável pela descoberta, 
 ### Reconhecimento HTTP
 
 ```bash
-python recon.py example.com --http
+murayama-recon example.com --http
 ```
 
 Com descoberta prévia de portas:
 
 ```bash
-python recon.py example.com --ports --http
+murayama-recon example.com --ports --http
 ```
 
 A etapa HTTP pode coletar:
@@ -328,7 +376,7 @@ Um header ausente é apresentado como observação; o impacto de segurança depe
 ### Saída JSON
 
 ```bash
-python recon.py example.com \
+murayama-recon example.com \
   --dns \
   --subdomains \
   --ports \
@@ -358,7 +406,7 @@ Estrutura resumida:
 ### Logging verbose
 
 ```bash
-python recon.py example.com --ports --http --verbose
+murayama-recon example.com --ports --http --verbose
 ```
 
 O modo verbose apresenta informações adicionais úteis para desenvolvimento e troubleshooting.
@@ -371,7 +419,7 @@ Execute:
 python -m pytest -v
 ```
 
-A suíte cobre componentes como parsing de portas da CLI, comportamento do scanner, extração de títulos HTTP, análise de tecnologias/security headers e geração de JSON.
+A suíte atual cobre parsing de portas da CLI, comportamento do scanner, extração de títulos HTTP, análise de tecnologias/security headers e geração de JSON.
 
 ## Decisões de arquitetura
 
@@ -403,6 +451,10 @@ Quando um host é encontrado por mais de um mecanismo, o toolkit o consolida e p
 
 O conjunto real de endereços também pode conter IPv6.
 
+### CLI instalável
+
+O toolkit é empacotado através do `pyproject.toml` e disponibiliza o comando `murayama-recon`. Isso separa o uso normal da ferramenta da estrutura interna dos módulos Python e faz com que o projeto se comporte como uma ferramenta convencional de linha de comando.
+
 ## Roadmap
 
 Possíveis evoluções:
@@ -416,7 +468,6 @@ Possíveis evoluções:
 - Relatórios CSV/HTML
 - Expansão dos testes automatizados
 - CI com verificações de segurança e qualidade
-- Empacotamento como CLI Python instalável
 
 ## Uso ético
 
