@@ -1,6 +1,31 @@
+# Virtual environment
 .venv/
+
+# IDE
 .idea/
+
+# Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Generated reconnaissance results
 output/*
 !output/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
