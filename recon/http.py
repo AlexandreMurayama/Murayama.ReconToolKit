@@ -2,9 +2,10 @@ import re
 import logging
 import requests
 from requests.exceptions import RequestException
-from recon.technologies import (
+from recon.technologies import analyze_technologies
+from recon.security_headers import (
     analyze_security_headers,
-    analyze_technologies,
+    calculate_security_score,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,17 +59,33 @@ def analyze_http(
                 allow_redirects=True,
             )
 
+            security_headers = analyze_security_headers(
+                response.headers
+            )
+
+            security_score = calculate_security_score(
+                security_headers
+            )
+
             return {
                 "url": response.url,
                 "status": response.status_code,
-                "server": response.headers.get("Server", "unknown"),
+                "server": response.headers.get(
+                    "Server",
+                    "unknown",
+                ),
                 "content_type": response.headers.get(
                     "Content-Type",
                     "unknown",
                 ),
-                "title": _extract_title(response.text),
-                "technologies": analyze_technologies(response.headers),
-                "security_headers": analyze_security_headers(response.headers),
+                "title": _extract_title(
+                    response.text
+                ),
+                "technologies": analyze_technologies(
+                    response.headers
+                ),
+                "security_headers": security_headers,
+                "security_score": security_score,
             }
 
 

@@ -132,18 +132,66 @@ def print_http_result(result: dict):
     else:
         print("        No technologies identified")
 
-    print("\n    Security Headers:")
+    print("\n    Security Header Analysis:")
 
     for header, details in result["security_headers"].items():
-        if details["present"]:
+        status = details["status"].upper()
+
+        print(
+            f"\n        [{status}] {header}"
+        )
+
+        if details["value"] is not None:
             print(
-                f"        [present] {header}: "
+                f"            Value: "
                 f"{details['value']}"
             )
-        else:
+
+        if details["severity"] is not None:
             print(
-                f"        [missing] {header}"
+                f"            Severity: "
+                f"{details['severity']}"
             )
+
+        if details["issues"]:
+            print(
+                "            Issues:"
+            )
+
+            for issue in details["issues"]:
+                print(
+                    f"                - {issue}"
+                )
+
+        if details["recommendation"]:
+            print(
+                "            Recommendation:"
+            )
+
+            print(
+                f"                "
+                f"{details['recommendation']}"
+            )
+
+    score = result["security_score"]
+
+    print("\n    Security Score:")
+
+    print(
+        f"        Score:   {score['score']}/100"
+    )
+
+    print(
+        f"        Good:    {score['good']}"
+    )
+
+    print(
+        f"        Weak:    {score['weak']}"
+    )
+
+    print(
+        f"        Missing: {score['missing']}"
+    )
 
 
 def print_nmap_result(result: dict):

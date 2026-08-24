@@ -35,11 +35,14 @@ fluxo.
 -   Reconhecimento HTTP/HTTPS
 -   Extração do título HTML
 -   Fingerprinting básico de tecnologias
--   Análise de security headers HTTP
+-   Security Header Analyzer com validação dos valores
+-   Classificação dos headers (`GOOD`, `WEAK`, `MISSING`)
+-   Severidade, problemas identificados e recomendações de correção
+-   Security Score (`0-100`)
 -   Correlação e deduplicação de subdomínios
 -   Geração de relatórios JSON
 -   Logging verbose/debug
--   Testes automatizados com pytest
+-   Testes automatizados com pytest (32 testes passando atualmente)
 -   Interface de linha de comando instalável (`murayama-recon`)
 -   Banner de terminal personalizado MurayamaRecon
 
@@ -105,6 +108,7 @@ Murayama.ReconToolKit/
 │   ├── logger.py
 │   ├── nmap.py
 │   ├── output.py
+│   ├── security_headers.py
 │   ├── ports.py
 │   ├── subdomains.py
 │   ├── subfinder.py
@@ -438,7 +442,13 @@ Tecnologias identificadas
 Security headers
 ```
 
-Os headers atualmente analisados incluem:
+### Security Header Analyzer
+
+A etapa de reconhecimento HTTP inclui um Security Header Analyzer
+nativo. Ele verifica tanto a presença de headers selecionados quanto,
+quando suportado, se os valores seguem expectativas defensivas básicas.
+
+Headers atualmente analisados:
 
 -   `Strict-Transport-Security`
 -   `Content-Security-Policy`
@@ -447,8 +457,55 @@ Os headers atualmente analisados incluem:
 -   `Referrer-Policy`
 -   `Permissions-Policy`
 
-Um header ausente é apresentado como observação; o impacto de segurança
-depende do contexto da aplicação e do ambiente.
+Cada header recebe uma classificação:
+
+-   `GOOD` --- presente e aceito pelas regras atuais de validação
+-   `WEAK` --- presente, mas com valor potencialmente fraco ou
+    inesperado
+-   `MISSING` --- ausente na resposta analisada
+
+As verificações atuais incluem `max-age` no HSTS, `X-Frame-Options`
+(`DENY` ou `SAMEORIGIN`), `X-Content-Type-Options` (`nosniff`) e
+detecção em CSP de `'unsafe-inline'`, `'unsafe-eval'` e fontes wildcard.
+
+Headers fracos ou ausentes incluem metadados de severidade, problemas
+identificados e uma recomendação de correção. O toolkit também calcula
+um Security Score simples de `0` a `100`:
+
+``` text
+GOOD    = 100% dos pontos
+WEAK    =  50% dos pontos
+MISSING =   0% dos pontos
+```
+
+Exemplo:
+
+``` text
+[+] HTTP Reconnaissance
+
+    Security Header Analysis:
+
+        [WEAK] Content-Security-Policy
+            Value: default-src * 'unsafe-inline'
+            Severity: medium
+            Issues:
+                - unsafe-inline directive detected.
+                - Wildcard source detected.
+
+        [GOOD] X-Frame-Options
+            Value: SAMEORIGIN
+
+    Security Score:
+        Score:   25/100
+        Good:    1
+        Weak:    1
+        Missing: 4
+```
+
+O score serve como apoio ao reconhecimento; ele não é uma classificação
+de vulnerabilidade nem substitui análise manual de segurança. A
+relevância e o impacto dos headers dependem da aplicação, comportamento
+dos navegadores, arquitetura de implantação e demais controles.
 
 ### Saída JSON
 

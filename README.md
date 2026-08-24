@@ -33,11 +33,14 @@ correlated, and exported through a single workflow.
 -   HTTP/HTTPS reconnaissance
 -   HTML title extraction
 -   Basic technology fingerprinting
--   HTTP security header analysis
+-   Security Header Analyzer with value validation
+-   Header classification (`GOOD`, `WEAK`, `MISSING`)
+-   Finding severity, issues, and remediation recommendations
+-   Security Score (`0-100`)
 -   Subdomain result correlation and deduplication
 -   JSON report generation
 -   Verbose/debug logging
--   Automated tests with pytest
+-   Automated tests with pytest (32 tests currently passing)
 -   Installable command-line interface (`murayama-recon`)
 -   Custom MurayamaRecon terminal banner
 
@@ -103,6 +106,7 @@ Murayama.ReconToolKit/
 │   ├── logger.py
 │   ├── nmap.py
 │   ├── output.py
+│   ├── security_headers.py
 │   ├── ports.py
 │   ├── subdomains.py
 │   ├── subfinder.py
@@ -433,7 +437,13 @@ Detected technologies
 Security headers
 ```
 
-Security headers currently checked include:
+### Security Header Analyzer
+
+The HTTP reconnaissance stage includes a native Security Header
+Analyzer. It checks both the presence of selected headers and, where
+supported, whether their values follow basic defensive expectations.
+
+Headers currently analyzed include:
 
 -   `Strict-Transport-Security`
 -   `Content-Security-Policy`
@@ -442,8 +452,54 @@ Security headers currently checked include:
 -   `Referrer-Policy`
 -   `Permissions-Policy`
 
-A missing header is reported as an observation; its security impact
-depends on the application and deployment context.
+Each header is classified as:
+
+-   `GOOD` --- present and accepted by the current validation rules
+-   `WEAK` --- present, but with a potentially weak or unexpected value
+-   `MISSING` --- not present in the analyzed response
+
+Current value-aware checks include HSTS `max-age`, `X-Frame-Options`
+(`DENY` or `SAMEORIGIN`), `X-Content-Type-Options` (`nosniff`), and CSP
+detection of `'unsafe-inline'`, `'unsafe-eval'`, and wildcard sources.
+
+Weak or missing headers include severity metadata, identified issues,
+and a remediation recommendation. The toolkit also calculates a simple
+Security Score from `0` to `100`:
+
+``` text
+GOOD    = 100% credit
+WEAK    =  50% credit
+MISSING =   0% credit
+```
+
+Example:
+
+``` text
+[+] HTTP Reconnaissance
+
+    Security Header Analysis:
+
+        [WEAK] Content-Security-Policy
+            Value: default-src * 'unsafe-inline'
+            Severity: medium
+            Issues:
+                - unsafe-inline directive detected.
+                - Wildcard source detected.
+
+        [GOOD] X-Frame-Options
+            Value: SAMEORIGIN
+
+    Security Score:
+        Score:   25/100
+        Good:    1
+        Weak:    1
+        Missing: 4
+```
+
+The score is a reconnaissance aid, not a vulnerability rating or a
+substitute for manual security review. Header relevance and impact
+depend on the application, browser behavior, deployment architecture,
+and other controls.
 
 ### JSON output
 
