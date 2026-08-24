@@ -11,6 +11,7 @@ from recon.subfinder import run_subfinder
 from recon.banner import print_banner
 from recon.banner_grabber import grab_banners
 from recon.tls import analyze_tls
+from recon.report import generate_html_report
 from recon.cli import (
     get_ports_to_scan,
     validate_tcp_port,
@@ -124,6 +125,11 @@ def parse_args():
         "--verbose",
         action="store_true",
         help="Enable verbose logging"
+    )
+
+    parser.add_argument(
+        "--report",
+        help="Generate an HTML security report"
     )
 
     return parser.parse_args()
@@ -766,7 +772,6 @@ def main():
                 f"[-] {error}"
             )
 
-
     # JSON Output
     if args.output:
         try:
@@ -782,6 +787,25 @@ def main():
 
         except ValueError as error:
             print(f"\n[-] {error}")
+
+    # HTML Security Report
+    if args.report:
+        try:
+            generate_html_report(
+                recon_results,
+                args.report,
+            )
+
+            print(
+                f"\n[+] HTML report saved to: "
+                f"{args.report}"
+            )
+
+        except OSError as error:
+            print(
+                f"\n[-] Failed to generate "
+                f"HTML report: {error}"
+            )
 
 
 if __name__ == "__main__":
