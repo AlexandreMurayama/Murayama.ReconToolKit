@@ -29,3 +29,6 @@ output/*
 # OS files
 .DS_Store
 Thumbs.db
+
+# TLS lab certificates and private keys
+tls-lab/*.pem

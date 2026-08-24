@@ -37,6 +37,13 @@ correlated, and exported through a single workflow.
 -   Header classification (`GOOD`, `WEAK`, `MISSING`)
 -   Finding severity, issues, and remediation recommendations
 -   Security Score (`0-100`)
+-   Native TLS/SSL security analysis
+-   TLS protocol and cipher inspection
+-   Certificate CN, SAN, issuer, validity, and expiration analysis
+-   Certificate hostname and trust validation
+-   TLS finding classification (`GOOD`, `WEAK`, `HIGH`, `UNKNOWN`)
+-   TLS Security Score (`0-100`)
+-   Custom TLS port support
 -   Subdomain result correlation and deduplication
 -   JSON report generation
 -   Verbose/debug logging
@@ -110,7 +117,8 @@ Murayama.ReconToolKit/
 │   ├── ports.py
 │   ├── subdomains.py
 │   ├── subfinder.py
-│   └── technologies.py
+│   ├── technologies.py
+│   └── tls.py
 ├── tests/
 ├── wordlists/
 │   └── subdomains.txt
@@ -229,6 +237,8 @@ The toolkit currently supports:
 --ports               Perform native TCP port scanning
 --banners             Grab service banners from discovered open ports
 --http                Perform HTTP reconnaissance
+--tls                 Perform TLS/SSL security analysis
+--tls-port PORT       Use a custom port for TLS analysis (default: 443)
 --wordlist PATH       Path to the subdomain wordlist
 --threads NUMBER      Number of concurrent threads
 --timeout SECONDS     Network timeout
@@ -501,6 +511,108 @@ substitute for manual security review. Header relevance and impact
 depend on the application, browser behavior, deployment architecture,
 and other controls.
 
+### TLS/SSL Security Analyzer
+
+The toolkit includes a native TLS/SSL analysis stage for inspecting the
+security characteristics of a TLS-enabled service:
+
+``` bash
+murayama-recon example.com --tls
+```
+
+By default, the analyzer connects to TCP port `443`. A different TLS
+port can be selected with `--tls-port`:
+
+``` bash
+murayama-recon localhost --tls --tls-port 9443
+```
+
+The TLS analyzer currently collects and evaluates:
+
+-   negotiated TLS protocol
+-   negotiated cipher suite and key strength
+-   certificate Common Name (CN)
+-   Subject Alternative Names (SANs)
+-   certificate issuer
+-   validity period and remaining lifetime
+-   certificate expiration status
+-   hostname validation
+-   certificate trust/chain validation
+
+The security checks are reported independently so that different
+certificate properties are not conflated:
+
+``` text
+Certificate -> temporal validity and expiration
+Hostname    -> whether the certificate matches the requested target
+Trust       -> whether the certificate chain is trusted
+```
+
+Each check is classified as `GOOD`, `WEAK`, `HIGH`, or `UNKNOWN`, with
+severity, issues, and remediation guidance when applicable. The analyzer
+also calculates a TLS Security Score from `0` to `100`.
+
+Example against a valid public TLS endpoint:
+
+``` text
+[+] TLS/SSL Analysis
+    Protocol:       TLSv1.3
+    Cipher:         TLS_AES_256_GCM_SHA384
+    Cipher Bits:    256
+    Common Name:    example.com
+
+    TLS Security Analysis:
+
+        [GOOD] Protocol
+        [GOOD] Cipher
+        [GOOD] Certificate
+        [GOOD] Hostname
+        [GOOD] Trust
+
+    TLS Security Score:
+        Score:   100/100
+        Good:    5
+        Weak:    0
+        High:    0
+        Unknown: 0
+```
+
+During development, the analyzer was also validated against a local
+self-signed certificate on port `9443`. The certificate matched
+`localhost` but failed trust validation, allowing the toolkit to
+distinguish hostname validity from CA trust:
+
+``` text
+[WEAK] Certificate
+    Severity: medium
+    Issues:
+        - Certificate expires in 29 days.
+
+[GOOD] Hostname
+
+[HIGH] Trust
+    Severity: high
+    Issues:
+        - Certificate trust validation failed: self-signed certificate
+
+TLS Security Score:
+    Score: 70/100
+```
+
+The TLS score is a reconnaissance aid rather than a substitute for a
+complete TLS configuration audit. It reflects the checks implemented by
+the current version of the toolkit.
+
+HTTP reconnaissance and TLS analysis can be combined and exported in a
+single report:
+
+``` bash
+murayama-recon example.com \
+  --http \
+  --tls \
+  --output output/example.com.json
+```
+
 ### JSON output
 
 ``` bash
@@ -529,7 +641,8 @@ Example structure:
   "ports": [],
   "banners": [],
   "nmap": [],
-  "http": []
+  "http": [],
+  "tls": []
 }
 ```
 
@@ -552,7 +665,8 @@ python -m pytest -v
 
 The current test suite covers CLI port parsing, port-scanner behavior,
 HTTP title extraction, technology/security-header analysis, and JSON
-output.
+output. TLS/SSL analysis is also part of the current toolkit
+functionality.
 
 ## Design decisions
 
@@ -625,7 +739,6 @@ Potential future improvements include:
 -   Configurable port profiles
 -   Additional protocol-aware banner probes
 -   Improved service fingerprinting
--   TLS/certificate inspection
 -   HTTP redirect-chain analysis
 -   Additional technology fingerprints
 -   CSV/HTML reporting

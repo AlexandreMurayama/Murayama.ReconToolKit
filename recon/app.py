@@ -1,6 +1,5 @@
 import argparse
 from datetime import datetime, timezone
-from recon.cli import get_ports_to_scan
 from recon.dns import enumerate_dns
 from recon.http import analyze_http
 from recon.logger import configure_logging
@@ -11,6 +10,11 @@ from recon.subdomains import enumerate_subdomains
 from recon.subfinder import run_subfinder
 from recon.banner import print_banner
 from recon.banner_grabber import grab_banners
+from recon.tls import analyze_tls
+from recon.cli import (
+    get_ports_to_scan,
+    validate_tcp_port,
+)
 
 
 def parse_args():
@@ -57,6 +61,19 @@ def parse_args():
         "--http",
         action="store_true",
         help="Perform HTTP reconnaissance"
+    )
+
+    parser.add_argument(
+        "--tls",
+        action="store_true",
+        help="Perform TLS/SSL analysis"
+    )
+
+    parser.add_argument(
+        "--tls-port",
+        type=int,
+        default=443,
+        help="TLS port to analyze (default: 443)",
     )
 
     parser.add_argument(
@@ -284,6 +301,17 @@ def main():
             "[-] --timeout must be greater than 0"
         )
 
+    try:
+        validate_tcp_port(
+            args.tls_port,
+            "--tls-port",
+        )
+
+    except ValueError as error:
+        raise SystemExit(
+            f"[-] {error}"
+        ) from error
+
     if args.nmap and not args.ports:
         raise SystemExit(
             "[-] --nmap requires --ports"
@@ -307,6 +335,7 @@ def main():
         "banners": [],
         "nmap": [],
         "http": [],
+        "tls": [],
     }
 
     print("[*] Murayama Recon Automation Toolkit")
@@ -592,6 +621,151 @@ def main():
                 print(
                     "    No HTTP/HTTPS service detected"
                 )
+
+    # TLS/SSL Analysis
+    if args.tls:
+        print("\n[+] TLS/SSL Analysis")
+
+        try:
+            tls_result = analyze_tls(
+                target=args.target,
+                port=args.tls_port,
+                timeout=args.timeout,
+            )
+
+            recon_results["tls"].append(
+                tls_result
+            )
+
+            certificate = tls_result["certificate"]
+            cipher = tls_result["cipher"]
+
+            print(
+                f"    Protocol:       "
+                f"{tls_result['protocol']}"
+            )
+
+            print(
+                f"    Cipher:         "
+                f"{cipher['name']}"
+            )
+
+            print(
+                f"    Cipher Bits:    "
+                f"{cipher['bits']}"
+            )
+
+            print(
+                f"    Common Name:    "
+                f"{certificate['common_name']}"
+            )
+
+            print(
+                f"    Issuer:         "
+                f"{certificate['issuer']}"
+            )
+
+            print(
+                f"    Valid From:     "
+                f"{certificate['not_before']}"
+            )
+
+            print(
+                f"    Valid Until:    "
+                f"{certificate['not_after']}"
+            )
+
+            print(
+                f"    Days Remaining: "
+                f"{certificate['days_remaining']}"
+            )
+
+            print(
+                f"    Expired:        "
+                f"{certificate['expired']}"
+            )
+
+            print("    SANs:")
+
+            for san in certificate["subject_alt_names"]:
+                print(
+                    f"        {san}"
+                )
+
+            print("\n    TLS Security Analysis:")
+
+            for check_name, details in tls_result[
+                "security_analysis"
+            ].items():
+                status = details["status"].upper()
+
+                print(
+                    f"\n        [{status}] "
+                    f"{check_name.capitalize()}"
+                )
+
+                if details["severity"] is not None:
+                    print(
+                        f"            Severity: "
+                        f"{details['severity']}"
+                    )
+
+                if details["issues"]:
+                    print(
+                        "            Issues:"
+                    )
+
+                    for issue in details["issues"]:
+                        print(
+                            f"                - {issue}"
+                        )
+
+                if details["recommendation"]:
+                    print(
+                        "            Recommendation:"
+                    )
+
+                    print(
+                        f"                "
+                        f"{details['recommendation']}"
+                    )
+
+            tls_score = tls_result[
+                "security_score"
+            ]
+
+            print("\n    TLS Security Score:")
+
+            print(
+                f"        Score:   "
+                f"{tls_score['score']}/100"
+            )
+
+            print(
+                f"        Good:    "
+                f"{tls_score['good']}"
+            )
+
+            print(
+                f"        Weak:    "
+                f"{tls_score['weak']}"
+            )
+
+            print(
+                f"        High:    "
+                f"{tls_score['high']}"
+            )
+
+            print(
+                f"        Unknown: "
+                f"{tls_score['unknown']}"
+            )
+
+        except ValueError as error:
+            print(
+                f"[-] {error}"
+            )
+
 
     # JSON Output
     if args.output:

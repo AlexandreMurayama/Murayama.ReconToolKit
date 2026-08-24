@@ -2,7 +2,7 @@ from argparse import Namespace
 
 import pytest
 
-from recon.cli import get_ports_to_scan
+from recon.cli import get_ports_to_scan, validate_tcp_port
 
 
 def make_args(
@@ -50,3 +50,40 @@ def test_reversed_port_range():
         match="Start port cannot be greater than end port",
     ):
         get_ports_to_scan(args)
+
+
+def test_valid_tls_port():
+    result = validate_tcp_port(
+        9443,
+        "--tls-port",
+    )
+
+    assert result == 9443
+
+
+def test_invalid_tls_port_above_range():
+    with pytest.raises(
+        ValueError,
+        match=(
+            "--tls-port must be between "
+            "1 and 65535"
+        ),
+    ):
+        validate_tcp_port(
+            70000,
+            "--tls-port",
+        )
+
+
+def test_invalid_tls_port_zero():
+    with pytest.raises(
+        ValueError,
+        match=(
+            "--tls-port must be between "
+            "1 and 65535"
+        ),
+    ):
+        validate_tcp_port(
+            0,
+            "--tls-port",
+        )
