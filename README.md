@@ -46,8 +46,12 @@ correlated, and exported through a single workflow.
 -   Custom TLS port support
 -   Subdomain result correlation and deduplication
 -   JSON report generation
+-   HTML Security Assessment Report
+-   Executive Summary with consolidated finding counts
+-   Consolidated Security Findings with severity, status, recommendations, and affected assets
+-   Deterministic finding IDs (`MR-HTTP-*`, `MR-TLS-*`)
 -   Verbose/debug logging
--   Automated tests with pytest (32 tests currently passing)
+-   Automated tests with pytest (61 tests currently passing)
 -   Installable command-line interface (`murayama-recon`)
 -   Custom MurayamaRecon terminal banner
 
@@ -113,6 +117,7 @@ Murayama.ReconToolKit/
 │   ├── logger.py
 │   ├── nmap.py
 │   ├── output.py
+│   ├── report.py
 │   ├── security_headers.py
 │   ├── ports.py
 │   ├── subdomains.py
@@ -246,6 +251,7 @@ The toolkit currently supports:
 --port-range RANGE    Scan a TCP port range
 --nmap                Enrich discovered ports with Nmap
 --output FILE         Save results as JSON
+--report FILE         Generate an HTML security assessment report
 --verbose             Enable verbose/debug logging
 ```
 
@@ -646,6 +652,92 @@ Example structure:
 }
 ```
 
+
+### HTML Security Assessment Report
+
+The toolkit can generate a standalone HTML security assessment report in
+addition to the JSON output:
+
+``` bash
+murayama-recon example.com \
+  --http \
+  --tls \
+  --report output/example.com.html
+```
+
+JSON and HTML can be generated in the same run:
+
+``` bash
+murayama-recon example.com \
+  --dns \
+  --subdomains \
+  --ports \
+  --banners \
+  --http \
+  --tls \
+  --nmap \
+  --output output/full-scan.json \
+  --report output/full-scan.html
+```
+
+The HTML report is designed as an assessment-oriented view of the same
+`recon_results` data structure used by the toolkit. It currently includes:
+
+-   target, generation timestamp, and toolkit metadata
+-   Executive Summary
+-   consolidated counts for High, Medium, Low, Informational, and passed checks
+-   consolidated Security Findings table
+-   deterministic finding IDs such as `MR-HTTP-001` and `MR-TLS-001`
+-   affected-assets consolidation for repeated findings
+-   severity and status badges
+-   remediation recommendations
+-   DNS reconnaissance
+-   discovered subdomains
+-   open ports
+-   captured service banners
+-   Nmap enrichment results when available
+-   HTTP Security Header Analyzer results and score
+-   TLS/SSL Security Analyzer results and score
+
+Repeated HTTP findings observed on both HTTP and HTTPS are consolidated in
+the Executive Summary and Security Findings section instead of being counted
+twice. The detailed technical sections still preserve the per-endpoint
+evidence.
+
+Example report flow:
+
+``` text
+MurayamaRecon Security Report
+        |
+        v
+Executive Summary
+        |
+        v
+Security Findings
+        |
+        +--> MR-HTTP-001
+        +--> MR-HTTP-002
+        +--> MR-TLS-001
+        |
+        v
+Technical Reconnaissance
+        |
+        +--> DNS
+        +--> Subdomains
+        +--> Ports
+        +--> Banners
+        +--> Nmap
+        |
+        v
+Security Analysis
+        |
+        +--> HTTP Security Headers
+        +--> TLS/SSL
+```
+
+All externally collected values are escaped before being written to the HTML
+report to reduce the risk of report-content injection.
+
 ### Verbose logging
 
 ``` bash
@@ -741,7 +833,7 @@ Potential future improvements include:
 -   Improved service fingerprinting
 -   HTTP redirect-chain analysis
 -   Additional technology fingerprints
--   CSV/HTML reporting
+-   CSV reporting
 -   Expanded automated tests
 -   CI security and quality checks
 

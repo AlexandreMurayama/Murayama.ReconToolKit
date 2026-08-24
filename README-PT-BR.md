@@ -48,8 +48,12 @@ fluxo.
 -   Suporte a porta TLS personalizada
 -   Correlação e deduplicação de subdomínios
 -   Geração de relatórios JSON
+-   HTML Security Assessment Report
+-   Executive Summary com contagem consolidada de findings
+-   Security Findings consolidados com severidade, status, recomendações e ativos afetados
+-   IDs determinísticos de findings (`MR-HTTP-*`, `MR-TLS-*`)
 -   Logging verbose/debug
--   Testes automatizados com pytest (32 testes passando atualmente)
+-   Testes automatizados com pytest (61 testes passando atualmente)
 -   Interface de linha de comando instalável (`murayama-recon`)
 -   Banner de terminal personalizado MurayamaRecon
 
@@ -115,6 +119,7 @@ Murayama.ReconToolKit/
 │   ├── logger.py
 │   ├── nmap.py
 │   ├── output.py
+│   ├── report.py
 │   ├── security_headers.py
 │   ├── ports.py
 │   ├── subdomains.py
@@ -248,6 +253,7 @@ O toolkit atualmente oferece:
 --port-range RANGE    Verifica um intervalo de portas TCP
 --nmap                Enriquece as portas encontradas com Nmap
 --output FILE         Salva os resultados em JSON
+--report FILE         Gera um relatório HTML de security assessment
 --verbose             Habilita logging verbose/debug
 ```
 
@@ -654,6 +660,92 @@ Estrutura resumida:
 }
 ```
 
+
+### HTML Security Assessment Report
+
+O toolkit pode gerar um relatório HTML standalone de security assessment,
+além da saída JSON:
+
+``` bash
+murayama-recon example.com \
+  --http \
+  --tls \
+  --report output/example.com.html
+```
+
+JSON e HTML podem ser gerados na mesma execução:
+
+``` bash
+murayama-recon example.com \
+  --dns \
+  --subdomains \
+  --ports \
+  --banners \
+  --http \
+  --tls \
+  --nmap \
+  --output output/full-scan.json \
+  --report output/full-scan.html
+```
+
+O relatório HTML foi projetado como uma visão orientada a assessment da mesma
+estrutura `recon_results` utilizada pelo toolkit. Atualmente ele inclui:
+
+-   alvo, timestamp de geração e metadados da ferramenta
+-   Executive Summary
+-   contagem consolidada de High, Medium, Low, Informational e checks aprovados
+-   tabela consolidada de Security Findings
+-   IDs determinísticos como `MR-HTTP-001` e `MR-TLS-001`
+-   consolidação de ativos afetados para findings repetidos
+-   badges visuais de severidade e status
+-   recomendações de correção
+-   reconhecimento DNS
+-   subdomínios descobertos
+-   portas abertas
+-   banners de serviços coletados
+-   resultados de enriquecimento Nmap quando disponíveis
+-   resultados e score do HTTP Security Header Analyzer
+-   resultados e score do TLS/SSL Security Analyzer
+
+Findings HTTP repetidos encontrados tanto em HTTP quanto em HTTPS são
+consolidados no Executive Summary e na seção Security Findings, evitando
+inflar artificialmente a contagem. As seções técnicas continuam preservando
+as evidências por endpoint.
+
+Fluxo resumido do relatório:
+
+``` text
+MurayamaRecon Security Report
+        |
+        v
+Executive Summary
+        |
+        v
+Security Findings
+        |
+        +--> MR-HTTP-001
+        +--> MR-HTTP-002
+        +--> MR-TLS-001
+        |
+        v
+Reconhecimento Técnico
+        |
+        +--> DNS
+        +--> Subdomínios
+        +--> Portas
+        +--> Banners
+        +--> Nmap
+        |
+        v
+Análise de Segurança
+        |
+        +--> HTTP Security Headers
+        +--> TLS/SSL
+```
+
+Todos os valores coletados externamente são escapados antes de serem gravados
+no HTML, reduzindo o risco de injeção de conteúdo no relatório.
+
 ### Logging verbose
 
 ``` bash
@@ -749,7 +841,7 @@ Possíveis evoluções:
 -   Fingerprinting de serviços mais avançado
 -   Análise da cadeia de redirects HTTP
 -   Novas assinaturas de tecnologias
--   Relatórios CSV/HTML
+-   Relatórios CSV
 -   Expansão dos testes automatizados
 -   CI com verificações de segurança e qualidade
 
